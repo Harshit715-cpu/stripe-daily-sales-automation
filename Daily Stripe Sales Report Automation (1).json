@@ -1,0 +1,251 @@
+{
+  "name": "Daily Stripe Sales Report Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.stripe.com/v1/charges",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Authorization: Bearer YOUR_STRIPE_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "aa36cdad-e1f9-4050-9fe7-50b272b65396",
+      "name": "Fetch Stripe Payments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        16,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const charges = $input.first().json.data;\n\nlet totalRevenue = 0;\nlet totalPayments = charges.length;\n\nfor (const charge of charges) {\n  totalRevenue += charge.amount;\n}\n\nreturn [\n  {\n    json: {\n      totalPayments: totalPayments,\n      totalRevenue: totalRevenue / 100\n    }\n  }\n];"
+      },
+      "id": "a331420b-5961-42ec-9cf5-0557a2fc6b23",
+      "name": "Calculate Metrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nconst report = `\nDaily Stripe Report\n\nTotal Payments: ${data.totalPayments}\nTotal Revenue: $${data.totalRevenue}\n\nGenerated automatically by n8n.\n`;\n\nreturn [\n  {\n    json: {\n      report: report\n    }\n  }\n];"
+      },
+      "id": "cd0b2794-27e5-4168-af33-dd48f4e27c14",
+      "name": "Build Text Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -192,
+        16
+      ],
+      "id": "c33cf597-199e-4a82-a724-a23bc8d35df5",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "sendTo": "sender_mail",
+        "subject": "sales report",
+        "message": "={{ $json.report }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        16
+      ],
+      "id": "42dd88f5-d7bb-4a6f-a8e2-60769c766b64",
+      "name": "Send a message",
+      "webhookId": "b43b0330-f586-4e75-b9ae-2138d18c3746",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YddbD5EB0N9ECE0T",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1OnSGFdm2PkPmBtfYiLZ53eaJzxRBsk1Jkl8Bq0kuN7A",
+          "mode": "list",
+          "cachedResultName": "stripe daily report",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OnSGFdm2PkPmBtfYiLZ53eaJzxRBsk1Jkl8Bq0kuN7A/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OnSGFdm2PkPmBtfYiLZ53eaJzxRBsk1Jkl8Bq0kuN7A/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{$now}}",
+            "Total Revenue": "={{$json[\"totalRevenue\"]}}",
+            "Payments Count": "={{$json[\"totalPayments\"]}}",
+            "Avg Payment": "={{$json[\"totalRevenue\"] / $json[\"totalPayments\"]}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Revenue",
+              "displayName": "Total Revenue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payments Count",
+              "displayName": "Payments Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Avg Payment",
+              "displayName": "Avg Payment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        400,
+        16
+      ],
+      "id": "881f221e-3507-42db-9027-6eb3466ff77d",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "L5xcYrbGG28oBkQ9",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Fetch Stripe Payments": {
+      "main": [
+        [
+          {
+            "node": "Calculate Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Metrics": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Text Report": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Fetch Stripe Payments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Build Text Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0d9053d8-24d1-4582-9b1e-345f75117673",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d57c173f8517541017655fb2e93ac1afc1c982f8f5d4f22f75cad12ed7040239"
+  },
+  "id": "MHHZNW0BdEZlLA7u",
+  "tags": []
+}
